@@ -4,26 +4,28 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "3.51.0"
     }
-    github = {
-      source  = "integrations/github"
-      version = "~> 5.0"
-    }
   }
 
 
 
   backend "azurerm" {
 
-    resource_group_name  = "backend"
-    storage_account_name = "oguzhanbackend"
-    container_name       = "aksterraformbackend"
+    resource_group_name  = "mtRG1"
+    storage_account_name = "mtstorageaccount002"
+    container_name       = "terraform"
     key                  = "terraform.tfstate"
+    use_msi = true
+    subscription_id = "550deaf3-571d-4166-b04d-9c990327385c"
+    tenant_id = "34a66ff2-1d04-44fa-993b-05e8a2a1500e"
   }
 }
 
 # az network nsg rule create --name testrule --nsg-name acceptanceTestSecurityGroup1 --priority 300 --resource-group rg-test --access Allow --destination-port-ranges 30003 --direction Inbound --protocol Tcp
 provider "azurerm" {
   features {}
+    use_msi = true
+    subscription_id = "550deaf3-571d-4166-b04d-9c990327385c"
+    tenant_id = "34a66ff2-1d04-44fa-993b-05e8a2a1500e"
 }
 
 resource "azurerm_resource_group" "rg" {
@@ -90,64 +92,4 @@ resource "azurerm_lb_rule" "rule2" {
   probe_id                       = azurerm_lb_probe.probe3002.id
 
   backend_address_pool_ids = [data.azurerm_lb_backend_address_pool.backAP.id]
-}
-
-resource "github_actions_environment_variable" "nodergname_var" {
-  repository    = "phonebook_kubernetes"
-  variable_name = "NODERG"
-  value         = azurerm_kubernetes_cluster.aks.node_resource_group
-  environment   = var.environment
-}
-
-resource "github_actions_environment_variable" "aksrgname_var" {
-  repository    = "phonebook_kubernetes"
-  variable_name = "AKSRG_NAME"
-  value         = azurerm_resource_group.rg.name
-  environment   = var.environment
-}
-
-resource "github_actions_environment_variable" "aksname_var" {
-  repository    = "phonebook_kubernetes"
-  variable_name = "AKS_NAME"
-  value         = azurerm_kubernetes_cluster.aks.name
-  environment   = var.environment
-}
-
-####################
-### MYSQL SERVER ###
-####################
-resource "azurerm_mysql_flexible_server" "db-server" {
-  name                   = var.db_server_name
-  resource_group_name    = azurerm_resource_group.rg.name
-  location               = azurerm_resource_group.rg.location
-  administrator_login    = var.db_username
-  administrator_password = var.db_password
-  sku_name               = "B_Standard_B1s"
-  zone                   = "1"
-}
-
-resource "azurerm_mysql_flexible_server_configuration" "require-secure-transport" {
-  name                = "require_secure_transport"
-  resource_group_name = azurerm_resource_group.rg.name
-  server_name         = azurerm_mysql_flexible_server.db-server.name
-  value               = "OFF"
-}
-
-resource "azurerm_mysql_flexible_server_firewall_rule" "allow-azure-resources" {
-  name                = "AllowAzureResources"
-  resource_group_name = azurerm_resource_group.rg.name
-  server_name         = azurerm_mysql_flexible_server.db-server.name
-  start_ip_address    = "0.0.0.0"
-  end_ip_address      = "0.0.0.0"
-}
-
-######################
-### MYSQL DATABASE ###
-######################
-resource "azurerm_mysql_flexible_database" "db" {
-  name                = var.prefix
-  resource_group_name = azurerm_resource_group.rg.name
-  server_name         = azurerm_mysql_flexible_server.db-server.name
-  charset             = "utf8mb4"
-  collation           = "utf8mb4_unicode_ci"
 }
